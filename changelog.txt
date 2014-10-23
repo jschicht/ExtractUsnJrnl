@@ -1,0 +1,6 @@
+ExtractUsnJrnl changelog
+
+
+v1.0.0.1: Added support for specifying output directory.
+
+v1.0.0.0: Initial version

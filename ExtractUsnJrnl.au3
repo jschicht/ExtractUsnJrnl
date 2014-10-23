@@ -2,7 +2,7 @@
 #AutoIt3Wrapper_Change2CUI=y
 #AutoIt3Wrapper_Res_Comment=Quickly extract $UsnJrnl from mounted volume
 #AutoIt3Wrapper_Res_Description=Quickly extract $UsnJrnl from mounted volume
-#AutoIt3Wrapper_Res_Fileversion=1.0.0.0
+#AutoIt3Wrapper_Res_Fileversion=1.0.0.1
 #AutoIt3Wrapper_Res_requestedExecutionLevel=asInvoker
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
 
@@ -12,7 +12,7 @@
 #Include <FileConstants.au3>
 #Include <APIConstants.au3>
 
-Global $GlobUsnJrnlFileSize, $GlobUsnJrnlSparseBytes
+Global $GlobUsnJrnlFileSize, $GlobUsnJrnlSparseBytes, $WriteToCurrentDir=0
 Global $RUN_VCN[1],$RUN_Clusters[1],$MFT_RUN_Clusters[1],$MFT_RUN_VCN[1],$DataQ[1],$sBuffer,$AttrQ[1],$NameQ[5],$AttributesArr[18][4]
 Global $SectorsPerCluster,$BytesPerSector,$DATA_Name,$_COMMON_KERNEL32DLL=DllOpen("kernel32.dll"),$INDX_Record_Size=4096,$HEADER_MFTREcordNumber,$FN_ParentReferenceNo,$RawTestOffsetArray
 Global $IndxEntryNumberArr[1],$IndxMFTReferenceArr[1],$IndxMFTRefSeqNoArr[1],$IndxMFTReferenceOfParentArr[1],$IndxMFTParentRefSeqNoArr[1],$IndxCTimeArr[1],$IndxATimeArr[1],$IndxMTimeArr[1],$IndxRTimeArr[1],$IndxFileNameArr[1]
@@ -39,18 +39,53 @@ Global $DateTimeFormat = 6 ; YYYY-MM-DD HH:MM:SS:MSMSMS:NSNSNSNS = 2007-08-18 08
 Global $tDelta = _WinTime_GetUTCToLocalFileTimeDelta(), $TimestampPrecision
 $DoRead=1
 
-ConsoleWrite("ExtractUsnJrnl v1.0.0.0" & @CRLF & @CRLF)
+ConsoleWrite("ExtractUsnJrnl v1.0.0.1" & @CRLF & @CRLF)
 
-If $cmdline[0] <> 1 Then
-	ConsoleWrite("Error: Missing volume parameter" & @CRLF)
-	ConsoleWrite("Syntax: ExtractUsnjrnl.exe C:" & @CRLF)
-	$TargetDrive = Inputbox("Select volume","Set drive $UsnJrnl should be extracted from","C:")
-	If @error Then Exit
-	$TargetDrive = StringMid($TargetDrive,1,2)
-Else
-	$TargetDrive = $cmdline[1]
+If $cmdline[0] <> 0 And $cmdline[0] <> 1 And $cmdline[0] <> 2 Then
+	ConsoleWrite("Example usage:" & @CRLF)
+	ConsoleWrite("ExtractUsnjrnl.exe C:" & @CRLF)
+	ConsoleWrite("ExtractUsnjrnl.exe C: E:\Outputdir\" & @CRLF)
+	Exit
 EndIf
-If StringLen($TargetDrive) = 1 Then $TargetDrive &= ":"
+
+Select
+	Case $cmdline[0] = 0
+		ConsoleWrite("Example usage:" & @CRLF)
+		ConsoleWrite("ExtractUsnjrnl.exe C:" & @CRLF)
+		ConsoleWrite("ExtractUsnjrnl.exe C: E:\Outputdir\" & @CRLF & @CRLF)
+		$TargetDrive = Inputbox("Select volume","Set drive $UsnJrnl should be extracted from","C:")
+		If @error Then Exit
+		$TargetDrive = StringMid($TargetDrive,1,2)
+		$WriteToCurrentDir=1
+		$OutputDirectory = @ScriptDir
+	Case $cmdline[0] = 1
+		$TargetDrive = $cmdline[1]
+		$WriteToCurrentDir=1
+		$OutputDirectory = @ScriptDir
+	Case $cmdline[0] = 2
+		$WriteToCurrentDir=0
+		$TargetDrive = $cmdline[1]
+		$OutputDirectory = $cmdline[2]
+		If StringRight($OutputDirectory,1) = "\" Then $OutputDirectory = StringTrimRight($OutputDirectory,1)
+		If Not FileExists($OutputDirectory) Then
+			ConsoleWrite("Error: Output directory does not exist: " & $OutputDirectory & @CRLF)
+			Exit
+		EndIf
+EndSelect
+
+$TargetDrive = StringMid($TargetDrive,1,1) & ":"
+If Not StringIsAlpha(StringMid($TargetDrive,1,1)) Then
+	ConsoleWrite("Error: Volume parameter seems incorrect: " & $TargetDrive & @CRLF)
+	Exit
+EndIf
+
+$OutUsnJrnlFile = $OutputDirectory & "\$UsnJrnl_$J.bin"
+If FileExists($OutUsnJrnlFile) Then
+	$CurrentTimestamp = @YEAR & @MON & @MDAY & @HOUR & @MIN & @SEC
+	FileMove($OutUsnJrnlFile,$OutUsnJrnlFile&".renamed_"&$CurrentTimestamp)
+	ConsoleWrite("Previous output file renamed to prevent overwrite: " & $OutUsnJrnlFile&".renamed_"&$CurrentTimestamp & @CRLF)
+EndIf
+
 $TargetFileName = $TargetDrive & "\$Extend\$UsnJrnl"
 $IndexNumber=""
 
@@ -92,9 +127,12 @@ If _DecodeMFTRecord($TargetDrive,$NewRecord,3) < 1 Then
 	Exit
 EndIf
 ;_ArrayDisplay($RawTestOffsetArray,"$RawTestOffsetArray")
+;$WriteToCurrentDir=1
+;$OutputDirectory = @ScriptDir
 If Ubound($RawTestOffsetArray) > 1 Then
 	Dim $nBytes
-	$OutUsnJrnlFile = @ScriptDir & "\" & StringLeft($TargetDrive,1) & "_$UsnJrnl_$J.bin"
+;	$OutUsnJrnlFile = @ScriptDir & "\" & StringLeft($TargetDrive,1) & "_$UsnJrnl_$J.bin"
+	$OutUsnJrnlFile = $OutputDirectory & "\$UsnJrnl_$J.bin"
 	$hVol = _WinAPI_CreateFile("\\.\" & $TargetDrive,2,2,7)
 	If $hVol = 0 Then
 		ConsoleWrite("Error: Creating handle on " & $TargetDrive & @CRLF)
