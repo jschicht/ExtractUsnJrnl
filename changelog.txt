@@ -1,5 +1,7 @@
 ExtractUsnJrnl changelog
 
+v1.0.0.3: Added support for image files and raw device.
+
 v1.0.0.2: Fixed bug with $MFT containing $ATTRIBUTE_LIST.
 
 v1.0.0.1: Added support for specifying output directory.
