@@ -9,14 +9,17 @@ The volume number to extract from. If volume is not NTFS nothing will be extract
 The full devicepath to extract from. Optional.
 /OutputPath:
 The output path to extract file to. Optional. If omitted, then extract path defaults to program directory.
+/OutputName:
+The output filename. Optional. If omitted, then filename be $UsnJrnl_$J.bin.
 
-Input can thus be /ImageFile: or /DevicePath:. Image files must be raw dd like images, and be disk or partition type image. When specifying device paths in /DevicePath it is possible to access attached devices that does not have any volumes mounted. Examples are HarddiskVolume1, Harddisk0Partition2, HarddiskVolumeShadowCopy1, PhysicalDrive1. For PhysicalDriveN you must specify /ImageVolume param.
+
+Input can thus be /ImageFile: or /DevicePath:. Image files must be raw dd like images, and be disk or partition type image. When specifying device paths in /DevicePath it is possible to access attached devices that does not have any volumes mounted. Examples are HarddiskVolume1, Harddisk0Partition2, HarddiskVolumeShadowCopy1, PhysicalDrive1. For PhysicalDriveN you must specify /ImageVolume param. The default is to extract the UsnJrnl to $UsnJrnl_$J.bin in program directory. If the output filename already exist, the existing one will be renamed and have "renamed_[timestamp]" appended where [timestamp] is the current time when program is run.
 
 
 Example usage:
 
-ExtractUsnJrnl /ImageFile:e:\images\disk.dd /ImageVolume:1 /OutputPath:e:\temp
+ExtractUsnJrnl /ImageFile:e:\images\disk.dd /ImageVolume:1 /OutputPath:e:\temp /OutputName:UsnJrnl_vol1.bin
 ExtractUsnJrnl /DevicePath:c:
-ExtractUsnJrnl /DevicePath:\\.\HarddiskVolumeShadowCopy1 /OutputPath:e:\temp
+ExtractUsnJrnl /DevicePath:\\.\HarddiskVolumeShadowCopy1 /OutputPath:e:\temp /OutputName:UsnJrnl_SC1.bin
 ExtractUsnJrnl /DevicePath:\\.\Harddisk0Partition2 /OutputPath:e:\temp
 ExtractUsnJrnl /DevicePath:\\.\PhysicalDrive0 /ImageVolume:3 /OutputPath:e:\temp

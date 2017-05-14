@@ -1,10 +1,10 @@
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
-#AutoIt3Wrapper_Icon=..\..\..\Program Files (x86)\autoit-v3.3.14.2\Icons\au3.ico
+#AutoIt3Wrapper_Icon=C:\Program Files (x86)\AutoIt3\Icons\au3.ico
 #AutoIt3Wrapper_UseUpx=y
 #AutoIt3Wrapper_Change2CUI=y
 #AutoIt3Wrapper_Res_Comment=Quickly extract $UsnJrnl from an NTFS volume
 #AutoIt3Wrapper_Res_Description=Quickly extract $UsnJrnl from an NTFS volume
-#AutoIt3Wrapper_Res_Fileversion=1.0.0.3
+#AutoIt3Wrapper_Res_Fileversion=1.0.0.4
 #AutoIt3Wrapper_Res_requestedExecutionLevel=asInvoker
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
 
@@ -16,7 +16,7 @@
 
 Global Const $RecordSignature = '46494C45' ; FILE signature
 Global $IsPhysicalDrive=False,$IsImage=False
-Global $GlobUsnJrnlFileSize, $GlobUsnJrnlSparseBytes, $LogicalClusterNumberforthefileMFT, $NonResidentFlag, $InitState = False, $IsCompressed, $Data_Clusters, $ClustersPerFileRecordSegment
+Global $GlobUsnJrnlFileSize, $GlobUsnJrnlSparseBytes, $LogicalClusterNumberforthefileMFT, $NonResidentFlag, $InitState = False, $IsCompressed, $Data_Clusters, $ClustersPerFileRecordSegment,$OutputName="$UsnJrnl_$J.bin"
 Global $RUN_VCN[1],$RUN_Clusters[1],$MFT_RUN_Clusters[1],$MFT_RUN_VCN[1],$DataQ[1],$sBuffer,$AttrQ[1],$NameQ[5],$AttributesArr[18][4],$Entries,$TargetDrive,$OutPutPath=@ScriptDir,$TargetImageFile,$ImageOffset=0
 Global $SectorsPerCluster,$BytesPerSector,$DATA_Name,$_COMMON_KERNEL32DLL=DllOpen("kernel32.dll"),$INDX_Record_Size=4096,$HEADER_MFTREcordNumber,$FN_ParentReferenceNo,$RawTestOffsetArray
 Global $IndxEntryNumberArr[1],$IndxMFTReferenceArr[1],$IndxMFTRefSeqNoArr[1],$IndxMFTReferenceOfParentArr[1],$IndxMFTParentRefSeqNoArr[1],$IndxCTimeArr[1],$IndxATimeArr[1],$IndxMTimeArr[1],$IndxRTimeArr[1],$IndxFileNameArr[1]
@@ -47,7 +47,7 @@ $VolumesArray[0][1] = "ByteOffset"
 $VolumesArray[0][2] = "Sectors"
 $DoRead=1
 
-ConsoleWrite("ExtractUsnJrnl v1.0.0.3" & @CRLF & @CRLF)
+ConsoleWrite("ExtractUsnJrnl v1.0.0.4" & @CRLF & @CRLF)
 
 _GetInputParams()
 ;_ArrayDisplay($VolumesArray,"$VolumesArray")
@@ -96,11 +96,11 @@ If _DecodeMFTRecord($TargetDrive,$NewRecord,3) < 1 Then
 	Exit
 EndIf
 ;_ArrayDisplay($RawTestOffsetArray,"$RawTestOffsetArray")
-;$OutPutPath = @ScriptDir
+
 If Ubound($RawTestOffsetArray) > 1 Then
 	Dim $nBytes
-;	$OutUsnJrnlFile = @ScriptDir & "\" & StringLeft($TargetDrive,1) & "_$UsnJrnl_$J.bin"
-	$OutUsnJrnlFile = $OutPutPath & "\$UsnJrnl_$J.bin"
+
+	$OutUsnJrnlFile = $OutPutPath & "\" & $OutputName
 	$hVol = _WinAPI_CreateFile($TargetDrive,2,2,7)
 	If $hVol = 0 Then
 		ConsoleWrite("Error: Creating handle on " & $TargetDrive & @CRLF)
@@ -3042,13 +3042,14 @@ Func _GenRefArray()
 EndFunc
 
 Func _GetInputParams()
-	Local $TmpOutPath, $TmpImageFile, $TmpDevicePath, $TmpImageVolume
+	Local $TmpOutPath, $TmpImageFile, $TmpDevicePath, $TmpImageVolume, $TmpOutName
 	For $i = 1 To $cmdline[0]
 		;ConsoleWrite("Param " & $i & ": " & $cmdline[$i] & @CRLF)
 		If StringLeft($cmdline[$i],12) = "/DevicePath:" Then $TmpDevicePath = StringMid($cmdline[$i],13)
 		If StringLeft($cmdline[$i],12) = "/OutputPath:" Then $TmpOutPath = StringMid($cmdline[$i],13)
 		If StringLeft($cmdline[$i],11) = "/ImageFile:" Then $TmpImageFile = StringMid($cmdline[$i],12)
 		If StringLeft($cmdline[$i],13) = "/ImageVolume:" Then $TmpImageVolume = StringMid($cmdline[$i],14)
+		If StringLeft($cmdline[$i],12) = "/OutputName:" Then $TmpOutName = StringMid($cmdline[$i],13)
 	Next
 	If $cmdline[0] = 0 Then
 		_PrintHelp()
@@ -3063,6 +3064,14 @@ Func _GetInputParams()
 		EndIf
 	Else
 		$OutPutPath = @ScriptDir
+	EndIf
+
+	If StringLen($TmpOutName) > 0 Then
+		$OutPutName = $TmpOutName
+		If StringInStr($OutPutName, "\") Then
+			$OutPutName = _GetFilenameFromPath($OutPutName)
+		EndIf
+		$OutPutName = _FixWindowsFilename($OutPutName)
 	EndIf
 
 	If StringLen($TmpImageVolume) > 0 Then
@@ -3155,11 +3164,13 @@ EndFunc
 
 Func _PrintHelp()
 	ConsoleWrite("Syntax:" & @CRLF)
-	ConsoleWrite("ExtractUsnJrnl /ImageFile:FullPath\ImageFilename /ImageVolume:[1,2...n] /DevicePath:DevicePath /OutputPath:FullPath" & @CRLF)
+	ConsoleWrite("ExtractUsnJrnl /ImageFile:FullPath\ImageFilename /ImageVolume:[1,2...n] /DevicePath:DevicePath /OutputPath:FullPath /OutputName:FileName" & @CRLF)
 	ConsoleWrite("Examples:" & @CRLF)
 	ConsoleWrite("ExtractUsnJrnl /ImageFile:e:\images\disk.dd /ImageVolume:1 /OutputPath:e:\temp" & @CRLF)
+	ConsoleWrite("ExtractUsnJrnl /ImageFile:e:\images\disk.dd /ImageVolume:1 /OutputPath:e:\temp /OutputName:$UsnJrnl_vol1.bin" & @CRLF)
 	ConsoleWrite("ExtractUsnJrnl /DevicePath:c:" & @CRLF)
 	ConsoleWrite("ExtractUsnJrnl /DevicePath:\\.\HarddiskVolumeShadowCopy1 /OutputPath:e:\temp" & @CRLF)
+	ConsoleWrite("ExtractUsnJrnl /DevicePath:\\.\HarddiskVolumeShadowCopy24 /OutputPath:e:\temp /OutputName:SC24_$UsnJrnl" & @CRLF)
 	ConsoleWrite("ExtractUsnJrnl /DevicePath:\\.\Harddisk0Partition2 /OutputPath:e:\temp" & @CRLF)
 	ConsoleWrite("ExtractUsnJrnl /DevicePath:\\.\PhysicalDrive0 /ImageVolume:3 /OutputPath:e:\temp" & @CRLF)
 EndFunc
@@ -3327,4 +3338,24 @@ EndFunc   ;==>_TestNTFS
 
 Func _GenComboDescription($StartSector,$SectorNumber)
 	Return "Offset = " & $StartSector*512 & ": Volume size = " & Round(($SectorNumber*512)/1024/1024/1024,2) & " GB|"
+EndFunc
+
+Func _GetFilenameFromPath($FileNamePath)
+	$stringlength = StringLen($FileNamePath)
+	If $stringlength = 0 Then Return SetError(1,0,0)
+	$TmpOffset = StringInStr($FileNamePath, "\", 1, -1)
+	If $TmpOffset = 0 Then Return $FileNamePath
+	Return StringMid($FileNamePath,$TmpOffset+1)
+EndFunc
+
+Func _FixWindowsFilename($input)
+	$input = StringReplace($input, "/", "")
+	$input = StringReplace($input, "\", "")
+	$input = StringReplace($input, ":", "")
+	$input = StringReplace($input, "*", "")
+	$input = StringReplace($input, "?", "")
+	$input = StringReplace($input, '"', "")
+	$input = StringReplace($input, "<", "")
+	$input = StringReplace($input, ">", "")
+	Return $input
 EndFunc
