@@ -1,5 +1,7 @@
 ExtractUsnJrnl changelog
 
+v1.0.0.5: Removed unused code.
+
 v1.0.0.4: Added new optional parameter /OutputName to override the original filename.
 
 v1.0.0.3: Added support for image files and raw device.
